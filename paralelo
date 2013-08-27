@@ -1,0 +1,55 @@
+// gcc -o ejemplo ejemplo.c (mac)
+// gcc -pthread -o ejemplo ejemplo.c (ubuntu)
+#include <pthread.h> // de aqui vienen los hilos
+#include <stdio.h> // lo de siempre
+#include <stdlib.h> // lo de siempre
+#include <time.h> // a ver si se necesita
+
+void *PrintHello(void *threadid) // a rutina a ejecutar para cada hilo
+{
+  long tid; // identificador entero
+  tid = (long)threadid; // asignacion a esa variable
+  printf("Hello World! It's me, thread #%ld!\n", tid); // impresion de un mensaje chiquito
+  pthread_exit(NULL); // el hilo sale sin error
+}
+
+#define MINIMO 3
+
+int main(int argc, char *argv[]) // lo de siempre
+{
+  time_t despues, antes = time(0); // dos variable para tiempo
+  int rep = 0;
+  pthread_t* threads; // un arreglo de hilos
+  int rc; // una variable para poner codigos de error que devuelvan los hilos
+  long t; // contador entero
+  int n = atoi(argv[1]);
+  void* status;
+
+  while (despues - antes < MINIMO) {
+    rep++;
+    threads = (pthread_t*)malloc(sizeof(pthread_t)*n);
+
+    for (t = 0; t < n; t++) { // un ciclo para crear e iniciar hilos
+      printf("In main: creating thread %ld\n", t); // imprimir un mensaje de avance
+      rc = pthread_create(&threads[t], NULL, PrintHello, (void *)t); // crear un hilo nuevo
+      if (rc) { // checar su valor de salida por si es error (o sea, no era cero) 
+	printf("ERROR; return code from pthread_create() is %d\n", rc); // quejar sobre el error
+	exit(-1); // salir avisando al OS que algo no estuvo bien
+      }
+    }
+   
+     for (t = 0; t < n; t++) {
+      rc = pthread_join(threads[t], &status);
+      if (rc) {
+	printf("ERROR; return code from pthread_join() is %d\n", rc);
+	exit(-1);
+      }
+    }
+    
+    free(threads);
+    despues = time(0);
+  }
+  fprintf(stderr, "Tiempo: %lf millisegundos (sobre %d repeticiones)\n", 
+	  1000.0*(despues - antes)/(rep*1.0), rep);
+  return 0;
+}
